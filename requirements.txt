@@ -4,4 +4,5 @@
 
 azure-functions
 pynacl
-azure-mgmt-compute~=4.3
+azure-mgmt-compute
+azure-identity

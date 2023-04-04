@@ -6,7 +6,7 @@ from telnetlib import Telnet
 
 import azure.functions as func
 import requests
-from azure.common.credentials import ServicePrincipalCredentials
+from azure.identity import DefaultAzureCredential
 from azure.mgmt.compute import ComputeManagementClient
 from msrestazure.azure_exceptions import CloudError
 from nacl.signing import VerifyKey
@@ -25,15 +25,6 @@ def verify(signature: str, timestamp: str, body: str) -> bool:
         return False
     
     return True
-
-def get_credentials():
-    subscription_id = os.environ['AZURE_SUBSCRIPTION_ID']
-    credentials = ServicePrincipalCredentials(
-        client_id=os.environ['AZURE_CLIENT_ID'], 
-        secret=os.environ['AZURE_CLIENT_SECRET'],
-        tenant=os.environ['AZURE_TENANT_ID']
-    )
-    return credentials, subscription_id
 
 @app.function_name(name="XionServerIF")
 @app.route(route="XionServerIF", auth_level=func.AuthLevel.ANONYMOUS, methods=['POST'], binding_arg_name='res')
@@ -146,9 +137,10 @@ def VMCtrl(msg: func.QueueMessage):
     if msg_body.get('type') == "start":
         try:
             logging.info(f"{vm_name} を起動します。")
-            credentials, subscription_id = get_credentials()
-            compute_client = ComputeManagementClient(credentials, subscription_id)
-            async_vm_start = compute_client.virtual_machines.start(
+            credential = DefaultAzureCredential()
+            subscription_id = os.environ['AZURE_SUBSCRIPTION_ID']
+            compute_client = ComputeManagementClient(credential, subscription_id)
+            async_vm_start = compute_client.virtual_machines.begin_start(
                 GROUP_NAME, vm_name)
             async_vm_start.wait()
         except CloudError:
@@ -181,9 +173,10 @@ def VMCtrl(msg: func.QueueMessage):
 
         try:
             logging.info(f"{vm_name} を停止します。")
-            credentials, subscription_id = get_credentials()
-            compute_client = ComputeManagementClient(credentials, subscription_id)
-            async_vm_stop = compute_client.virtual_machines.deallocate(
+            credential = DefaultAzureCredential()
+            subscription_id = os.environ['AZURE_SUBSCRIPTION_ID']
+            compute_client = ComputeManagementClient(credential, subscription_id)            
+            async_vm_stop = compute_client.virtual_machines.begin_deallocate(
                 GROUP_NAME, vm_name)
             async_vm_stop.wait()
         except CloudError:
